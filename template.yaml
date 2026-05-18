@@ -1,0 +1,79 @@
+# SubStore Mihomo 配置模板
+# 国外走代理 / 国内走直连
+#
+# 此文件放在 GitHub，在 SubStore 的「配置模板」里填入此文件的 Raw 链接
+# SubStore 会把你的节点自动注入到 proxies 里，规则等其余部分保持不变
+
+
+# ────────────────────────────────────────────────────────
+# 基础设置
+# ────────────────────────────────────────────────────────
+
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: warning
+ipv6: false
+
+external-controller: 127.0.0.1:9090
+secret: ""
+
+unified-delay: true
+tcp-concurrent: true
+
+
+# ────────────────────────────────────────────────────────
+# DNS
+# ────────────────────────────────────────────────────────
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "time.*.com"
+    - "ntp.aliyun.com"
+  nameserver:
+    - https://223.5.5.5/dns-query
+    - https://doh.pub/dns-query
+
+
+# ────────────────────────────────────────────────────────
+# 代理组
+# ────────────────────────────────────────────────────────
+# SubStore 会把你订阅里的节点注入到 proxies 列表
+# include-all: true 表示自动包含所有注入进来的节点
+
+proxy-groups:
+
+  - name: "🚀 代理"
+    type: select
+    proxies:
+      - "⚡ 自动最快"
+      - "✋ 手动选择"
+
+  - name: "⚡ 自动最快"
+    type: url-test
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    tolerance: 50
+    include-all: true
+
+  - name: "✋ 手动选择"
+    type: select
+    include-all: true
+
+
+# ────────────────────────────────────────────────────────
+# 路由规则
+# ────────────────────────────────────────────────────────
+
+rules:
+  - GEOIP,private,DIRECT,no-resolve
+  - GEOSITE,CN,DIRECT
+  - GEOIP,CN,DIRECT,no-resolve
+  - MATCH,🚀 代理
