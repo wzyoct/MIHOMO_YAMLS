@@ -1,6 +1,12 @@
 # SubStore YAML 格式覆写
 # 用途：国外走代理 / 国内走直连
-# 参考：HenryChiao/MIHOMO_YAMLS wiki 第二阶段：新手篇
+#
+# 使用方法：
+#   将此文件放到 GitHub 公开仓库
+#   在 SubStore → 文件 → 脚本操作 → 填入此文件的 Raw 链接
+#
+# 此文件控制：规则、代理组、DNS、基础设置
+# 节点由 SubStore 自动从你的订阅注入，不需要在这里填
 
 
 # ── 基础设置 ──────────────────────────────────────────────────────
@@ -15,27 +21,6 @@ secret: ""
 unified-delay: true
 tcp-concurrent: true
 
-# GeoData 自动更新（即使用 rule-providers 也建议保留，作为兜底）
-geo-auto-update: true
-geo-update-interval: 24
-geox-url:
-  geoip: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
-  geosite: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
-  mmdb: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb"
-
-
-# ── 流量嗅探（识别真实域名，提升规则命中率）──────────────────────
-
-sniffer:
-  enable: true
-  sniff:
-    HTTP:
-      ports: [80, 8080]
-    TLS:
-      ports: [443, 8443]
-    QUIC:
-      ports: [443, 8443]
-
 
 # ── DNS ───────────────────────────────────────────────────────────
 
@@ -46,11 +31,10 @@ dns:
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
 
-  # respect-rules：DNS 解析遵守路由规则
-  # 代理域名会走代理侧 DNS 解析，避免被国内 DNS 污染
+  # 遵守路由规则：代理域名走代理侧 DNS 解析，不被国内 DNS 污染
   respect-rules: true
 
-  # fake-ip 白名单：这些域名直接返回真实 IP，不造假
+  # fake-ip 白名单：这些域名不造假，直接返回真实 IP
   fake-ip-filter:
     - "*.lan"
     - "*.local"
@@ -65,12 +49,12 @@ dns:
     - "localhost.ptlogin2.qq.com"
     - "router.asus.com"
 
-  # 代理节点域名解析用的 DNS（解析节点地址本身）
+  # 专门用于解析代理节点地址本身（不走代理，防止鸡生蛋问题）
   proxy-server-nameserver:
     - https://223.5.5.5/dns-query
     - https://doh.pub/dns-query
 
-  # 精细 DNS 策略：国内域名用国内 DNS，国外域名用加密 DNS（配合 respect-rules 走代理解析）
+  # 国内域名 → 国内 DNS；国外域名 → 加密 DNS（配合 respect-rules 走代理解析）
   nameserver-policy:
     "geosite:cn,private":
       - https://223.5.5.5/dns-query
@@ -79,58 +63,17 @@ dns:
       - "tls://8.8.8.8"
       - "tls://1.1.1.1"
 
-  # 默认 nameserver（未被 policy 覆盖的域名使用）
+  # 默认（未被 policy 覆盖的域名）
   nameserver:
     - https://223.5.5.5/dns-query
     - https://doh.pub/dns-query
-
-
-# ── 规则集（MetaCubeX 官方 .mrs 格式，二进制，加载最快）─────────
-
-# 锚点：复用规则集基础参数
-rs_domain: &rs_domain
-  type: http
-  behavior: domain
-  format: mrs
-  interval: 86400
-
-rs_ipcidr: &rs_ipcidr
-  type: http
-  behavior: ipcidr
-  format: mrs
-  interval: 86400
-
-rule-providers:
-
-  # 国内域名直连
-  cn-domain:
-    <<: *rs_domain
-    url: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geo/geosite/cn.mrs"
-    path: ./rule_set/cn-domain.mrs
-
-  # 国内 IP 直连
-  cn-ip:
-    <<: *rs_ipcidr
-    url: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geo/geoip/cn.mrs"
-    path: ./rule_set/cn-ip.mrs
-
-  # 私有网络（局域网）直连
-  private-domain:
-    <<: *rs_domain
-    url: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geo/geosite/private.mrs"
-    path: ./rule_set/private-domain.mrs
-
-  private-ip:
-    <<: *rs_ipcidr
-    url: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geo/geoip/private.mrs"
-    path: ./rule_set/private-ip.mrs
 
 
 # ── 代理组 ────────────────────────────────────────────────────────
 
 proxy-groups:
 
-  # 总开关：日常用故障转移，也可切换到其他策略
+  # 总开关：默认故障转移，可手动切换策略
   - name: "🚀 代理"
     type: select
     proxies:
@@ -138,17 +81,17 @@ proxy-groups:
       - "⚡ 自动最快"
       - "✋ 手动选择"
 
-  # 故障转移：当前节点挂了才切，不主动抢更快的，连接更稳定
+  # 故障转移：当前节点挂了才切换，连接更稳定，日常推荐
   - name: "🔄 故障转移"
     type: fallback
     url: "https://www.gstatic.com/generate_204"
     interval: 300
-    lazy: true          # 懒检查：不触发时不主动检测，节省资源
+    lazy: true
     timeout: 2000
     max-failed-times: 3
     include-all: true
 
-  # 自动最快：定期测速，始终走延迟最低的节点
+  # 自动最快：持续测速，始终走延迟最低的节点
   - name: "⚡ 自动最快"
     type: url-test
     url: "https://www.gstatic.com/generate_204"
@@ -164,17 +107,16 @@ proxy-groups:
     include-all: true
 
 
-# ── 路由规则（非 IP 类在前，IP 类在后）──────────────────────────
-# 原则：先匹配不需要 DNS 解析的域名规则，减少不必要的 DNS 查询
+# ── 路由规则 ──────────────────────────────────────────────────────
+# 原则：域名类规则在前（不触发 DNS），IP 类规则在后（会触发 DNS 解析）
 
 rules:
-  # 私有网络直连（局域网）
-  - RULE-SET,private-domain,DIRECT
-  - RULE-SET,private-ip,DIRECT,no-resolve
+  # 域名类：国内直连（先匹配，命中率高）
+  - GEOSITE,CN,DIRECT
 
-  # 国内直连
-  - RULE-SET,cn-domain,DIRECT
-  - RULE-SET,cn-ip,DIRECT,no-resolve
+  # IP 类：局域网 + 国内 IP 直连（no-resolve 避免重复解析）
+  - GEOIP,private,DIRECT,no-resolve
+  - GEOIP,CN,DIRECT,no-resolve
 
   # 其余全走代理
   - MATCH,🚀 代理
