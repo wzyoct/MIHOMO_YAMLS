@@ -45,15 +45,12 @@ proxy-groups:
   - name: "🚀 代理"
     type: select
     proxies:
-      - "⚡ 自动最快"
       - "🔄 故障转移"      # ← 新增
+      - "⚡ 自动最快"
       - "✋ 手动选择"
 
-  - name: "⚡ 自动最快"
-    type: url-test
-    url: "https://www.gstatic.com/generate_204"
-    interval: 300
-    tolerance: 50
+  - name: "✋ 手动选择"
+    type: select
     include-all: true
 
   - name: "🔄 故障转移"    # ← 新增
@@ -64,10 +61,12 @@ proxy-groups:
     max-failed-times: 3
     include-all: true
 
-  - name: "✋ 手动选择"
-    type: select
+  - name: "⚡ 自动最快"
+    type: url-test
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    tolerance: 50
     include-all: true
-
 # ── 覆写路由规则 ─────────────────────────────────────────────────
 
 rules:
