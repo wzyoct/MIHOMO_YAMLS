@@ -81,6 +81,11 @@ proxy-groups:
       - "⚡ 自动最快"
       - "✋ 手动选择"
 
+  # 手动选择：从所有节点中自己挑
+  - name: "✋ 手动选择"
+    type: select
+    include-all: true
+
   # 故障转移：当前节点挂了才切换，连接更稳定，日常推荐
   - name: "🔄 故障转移"
     type: fallback
@@ -99,11 +104,6 @@ proxy-groups:
     lazy: true
     tolerance: 50
     timeout: 2000
-    include-all: true
-
-  # 手动选择：从所有节点中自己挑
-  - name: "✋ 手动选择"
-    type: select
     include-all: true
 
 
