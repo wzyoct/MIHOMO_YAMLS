@@ -83,7 +83,14 @@ proxy-groups:
 # ── 路由规则 ──────────────────────────────────────────────────────
 
 rules:
+  # Steam 直连（国内 CDN 加速）
+  - GEOSITE,steam@cn,DIRECT
+  - DOMAIN-SUFFIX,steamserver.net,DIRECT
+
+  # 国内直连
   - GEOSITE,CN,DIRECT
   - GEOIP,private,DIRECT,no-resolve
   - GEOIP,CN,DIRECT,no-resolve
+
+  # 其余走代理
   - MATCH,🚀 代理
