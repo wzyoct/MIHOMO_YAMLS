@@ -83,11 +83,13 @@ proxy-groups:
 # ── 路由规则 ──────────────────────────────────────────────────────
 
 rules:
+  # Steam 下载直连
+  - DOMAIN-SUFFIX,steamserver.net,DIRECT
+  - DOMAIN-SUFFIX,steamcontent.com,DIRECT
+  - DOMAIN-SUFFIX,steamchina.com,DIRECT
   # Steam GEOSITE 规则
   - GEOSITE,steam@cn,DIRECT
   - GEOSITE,steam,🚀 代理
-  # Steam 单条规则（已改用 GEOSITE）
-  # - DOMAIN-SUFFIX,steamserver.net,DIRECT
   # 小米 AI 直连
   - GEOSITE,xiaomi-ai,DIRECT
   # 局域网直连
