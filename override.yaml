@@ -114,8 +114,6 @@ rules:
   # Steam GEOSITE 规则
   - GEOSITE,steam@cn,DIRECT
   - GEOSITE,steam,🚀 代理
-  # 小米 AI 直连
-  - GEOSITE,xiaomi-ai,DIRECT
   # 局域网直连
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
