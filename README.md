@@ -97,7 +97,7 @@ sniffer:
 规则从上到下匹配，命中即停止：
 
 1. **局域网 / 私有地址** → `DIRECT`（直连）
-2. **Google 服务**（仅 `override.yaml`）→ `🚀 代理`（在 cn 规则之前优先匹配）
+2. **Google 服务**（仅 `override.yaml`）：CDN 下载域名（`xn--ngstr-lra8j.com`、`clientservices.googleapis.com`、`update.googleapis.com`）走 `DIRECT` 直连，其余浏览/API 走 `🚀 代理`
 3. **Steam 相关**（仅 `override.yaml`）：下载服务器直连，其余走代理
 4. **国内网站 / IP** → `DIRECT`（通过 GEOSITE:CN / GEOIP:CN）
 5. **其余所有流量** → `🚀 代理`
@@ -112,16 +112,16 @@ sniffer:
 | hosts（Google 域名固定 IP） | ❌ | ✅ |
 | DNS - use-hosts / use-system-hosts | ❌ | ✅ |
 | DNS - fake-ip-filter-mode | ❌ | ✅ blacklist |
-| DNS - fake-ip-filter 条目 | 4 条 | 24 条（含 Google Play 下载域名） |
+| DNS - fake-ip-filter 条目 | 4 条 | 27 条（含 Google Play 下载域名 + CDN 域名） |
 | DNS - default-nameserver | ❌ | ✅ |
 | DNS - proxy-server-nameserver | ❌ | ✅ |
 | DNS - nameserver-policy | ❌ | ✅（Steam + Google + geosite 分流） |
 | 域名嗅探（sniffer） | ❌ | ✅（TLS + HTTP） |
 | 代理组 - 自动模式 | url-test（⚡ 自动最快） | fallback（🔄 故障转移） |
-| Google 服务路由规则 | ❌ | ✅（gvt1.com + GEOSITE:google 等） |
+| Google 服务路由规则 | ❌ | ✅（CDN 下载直连 + gvt1.com + GEOSITE:google 等） |
 | Steam 路由规则 | ❌ | ✅（下载直连 + GEOSITE） |
 | CIDR 局域网规则 | GEOIP 一条 | IP-CIDR 五段 + GEOIP |
-| 文件行数 | 79 行 | ~190 行 |
+| 文件行数 | 79 行 | ~193 行 |
 
 ### 建议
 
