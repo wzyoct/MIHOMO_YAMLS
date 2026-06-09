@@ -7,7 +7,7 @@
 #   不要放在 SubStore 的“脚本操作”里执行
 #   需要把它用于支持 YAML 覆写/配置覆写的入口
 #
-# 此文件控制：基础设置、hosts、DNS、域名嗅探、代理组、路由规则
+# 此文件控制：基础设置、DNS、域名嗅探、代理组、路由规则
 # 节点由 SubStore 自动从你的订阅注入，不需要在这里填写
 
 
@@ -22,17 +22,6 @@ external-controller: 127.0.0.1:9090
 secret: ""
 unified-delay: true
 tcp-concurrent: true
-
-
-# ── hosts ─────────────────────────────────────────────────────────
-
-hosts:
-  # 固定 Google 关键服务域名到真实 IP，避免 DNS 污染导致 Play 商店下载问题
-  services.googleapis.cn: 142.250.80.227
-  play.googleapis.com: 142.250.80.238
-  android.clients.google.com: 142.250.80.238
-  mtalk.google.com: 108.177.119.188
-
 
 # ── DNS ───────────────────────────────────────────────────────────
 
@@ -65,12 +54,12 @@ dns:
     - "router.asus.com"
     # Google Play 下载域名走真实 DNS，避免 Fake-IP 导致 DownloadManager 路由失败
     - "*.gvt1.com"
-    - "gvt1.com"
     - "services.googleapis.cn"
     - "android.clients.google.com"
     - "dl.google.com"
     - "*.dl.google.com"
     - "*.googleapis.cn"
+    - "googleapis.cn"
     - "*.googleapis.com"
     # Google Play 国内 CDN 下载域名走真实 DNS，走代理反而卡住
     - "xn--ngstr-lra8j.com"
@@ -113,8 +102,6 @@ sniffer:
   sniffing:
     - tls
     - http
-  port-whitelist: []
-  force-domain: []
   skip-domain:
     - "*.lan"
     - "*.local"
@@ -154,15 +141,12 @@ rules:
   - DOMAIN-SUFFIX,steamserver.net,DIRECT
   - DOMAIN-SUFFIX,steamcontent.com,DIRECT
   - DOMAIN-SUFFIX,steamchina.com,DIRECT
-  # Google 服务 CDN 下载域名走直连（国内 CDN，走代理反而下载卡住）
+  # Google 服务 CDN 下载走直连（国内 CDN，走代理反而卡住 — OpenClash #3131/#4064 公认修复）
   - DOMAIN-SUFFIX,xn--ngstr-lra8j.com,DIRECT
+  - DOMAIN,services.googleapis.cn,DIRECT
   - DOMAIN,clientservices.googleapis.com,DIRECT
   - DOMAIN,update.googleapis.com,DIRECT
-  # Google 其他服务走代理（在 GEOSITE,cn 之前，优先于国内规则）
-  - DOMAIN-SUFFIX,gvt1.com,🚀 代理
-  - DOMAIN,services.googleapis.cn,🚀 代理
-  - DOMAIN,android.clients.google.com,🚀 代理
-  - DOMAIN,play.googleapis.com,🚀 代理
+  # Google 其他服务走代理（GEOSITE 兜底，在 CN 规则之前）
   - GEOSITE,google,🚀 代理
   # Steam GEOSITE 规则
   - GEOSITE,steam@cn,DIRECT
