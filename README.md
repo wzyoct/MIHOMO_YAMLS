@@ -118,10 +118,10 @@ sniffer:
 | DNS - nameserver-policy | ❌ | ✅（Steam + Google + geosite 分流） |
 | 域名嗅探（sniffer） | ❌ | ✅（TLS + HTTP） |
 | 代理组 - 自动模式 | url-test（⚡ 自动最快） | fallback（🔄 故障转移） |
-| Google 服务路由规则 | ❌ | ✅（CDN 下载直连 + gvt1.com + GEOSITE:google 等） |
+| Google 服务路由规则 | ❌ | ✅（CDN 下载直连 + GEOSITE:google 兜底代理） |
 | Steam 路由规则 | ❌ | ✅（下载直连 + GEOSITE） |
 | CIDR 局域网规则 | GEOIP 一条 | IP-CIDR 五段 + GEOIP |
-| 文件行数 | 79 行 | ~193 行 |
+| 文件行数 | 79 行 | ~165 行 |
 
 ### 建议
 
