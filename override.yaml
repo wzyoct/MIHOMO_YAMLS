@@ -72,6 +72,10 @@ dns:
     - "*.dl.google.com"
     - "*.googleapis.cn"
     - "*.googleapis.com"
+    # Google Play 国内 CDN 下载域名走真实 DNS，走代理反而卡住
+    - "xn--ngstr-lra8j.com"
+    - "clientservices.googleapis.com"
+    - "update.googleapis.com"
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
@@ -150,7 +154,11 @@ rules:
   - DOMAIN-SUFFIX,steamserver.net,DIRECT
   - DOMAIN-SUFFIX,steamcontent.com,DIRECT
   - DOMAIN-SUFFIX,steamchina.com,DIRECT
-  # Google 服务走代理（在 GEOSITE,cn 之前，优先于国内规则）
+  # Google 服务 CDN 下载域名走直连（国内 CDN，走代理反而下载卡住）
+  - DOMAIN-SUFFIX,xn--ngstr-lra8j.com,DIRECT
+  - DOMAIN,clientservices.googleapis.com,DIRECT
+  - DOMAIN,update.googleapis.com,DIRECT
+  # Google 其他服务走代理（在 GEOSITE,cn 之前，优先于国内规则）
   - DOMAIN-SUFFIX,gvt1.com,🚀 代理
   - DOMAIN,services.googleapis.cn,🚀 代理
   - DOMAIN,android.clients.google.com,🚀 代理
