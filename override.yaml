@@ -56,7 +56,6 @@ dns:
     - "*.gvt1.com"
     - "services.googleapis.cn"
     - "android.clients.google.com"
-    - "dl.google.com"
     - "*.dl.google.com"
     - "*.googleapis.cn"
     - "googleapis.cn"

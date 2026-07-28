@@ -47,25 +47,11 @@ unified-delay: true       # 统一延迟测试
 tcp-concurrent: true      # TCP 并发连接
 ```
 
-### hosts（仅 `override.yaml`）
-
-`override.yaml` 内置了 `hosts` 配置，将 Google 关键服务域名固定到真实 IP：
-
-```yaml
-hosts:
-  services.googleapis.cn: 142.250.80.227
-  play.googleapis.com: 142.250.80.238
-  android.clients.google.com: 142.250.80.238
-  mtalk.google.com: 108.177.119.188
-```
-
-> 此配置可避免 DNS 污染导致 Google Play 商店无法正常下载/更新应用。
-
 ### DNS
 
 - **增强模式**：`fake-ip`（Fake IP 模式），减少 DNS 泄露
 - **Fake IP 范围**：`198.18.0.1/16`
-- **Fake IP 过滤**：排除局域网域名、NTP 时间同步、微软连通性检测、**Google Play 下载域名**（`*.gvt1.com`、`dl.google.com`、`*.googleapis.cn` 等）
+- **Fake IP 过滤**：排除局域网域名、NTP 时间同步、微软连通性检测、**Google Play 下载域名**（`*.gvt1.com`、`*.dl.google.com`、`*.googleapis.cn` 等）
 - **nameserver**：国内 DNS（Ali DNS、DNSPod），确保国内域名解析正确
 - **nameserver-policy**（仅 `override.yaml`）：Steam 相关域名和 `geosite:cn` 走国内 DNS；**Google 域名** 和 `geosite:geolocation-!cn` 走 Google/Cloudflare DNS 代理
 
@@ -109,7 +95,6 @@ sniffer:
 | 配置项 | `template.yaml` | `override.yaml` |
 |--------|:---:|:---:|
 | 基础设置 | ✅ | ✅ |
-| hosts（Google 域名固定 IP） | ❌ | ✅ |
 | DNS - use-hosts / use-system-hosts | ❌ | ✅ |
 | DNS - fake-ip-filter-mode | ❌ | ✅ blacklist |
 | DNS - fake-ip-filter 条目 | 4 条 | 27 条（含 Google Play 下载域名 + CDN 域名） |
@@ -121,7 +106,7 @@ sniffer:
 | Google 服务路由规则 | ❌ | ✅（CDN 下载直连 + GEOSITE:google 兜底代理） |
 | Steam 路由规则 | ❌ | ✅（下载直连 + GEOSITE） |
 | CIDR 局域网规则 | GEOIP 一条 | IP-CIDR 五段 + GEOIP |
-| 文件行数 | 79 行 | ~165 行 |
+| 文件行数 | 79 行 | ~164 行 |
 
 ### 建议
 
@@ -146,3 +131,90 @@ MIHOMO_YAMLS/
 - ⚠️ `proxy-groups` 中使用了 `include-all: true`，SubStore 会自动将你订阅中的所有节点注入
 - ⚠️ 如遇国内网站访问异常，检查 DNS 配置中的 `nameserver` 是否可达
 - ⚠️ `external-controller` 监听 `127.0.0.1` 仅本地可访问，如需局域网访问请修改
+- ⚠️ `override.yaml` 的 `nameserver-policy` 中使用了 emoji 代理组名称（`#🚀 代理`），如果客户端不支持 emoji 解析，请将代理组名称和所有引用改为纯 ASCII 名称
+
+---
+
+## 故障排除
+
+### Google Play 下载卡在「准备中」
+
+这是最常见的问题，通常由 DNS 解析或路由导致：
+
+1. **确认使用 `override.yaml`** — `template.yaml` 没有针对 Google Play 的优化
+2. **检查 fake-ip-filter** — 确保 `*.gvt1.com`、`*.dl.google.com`、`*.googleapis.cn` 等域名在 fake-ip-filter 列表中
+3. **检查 DNS 可达性** — 在终端运行 `nslookup dl.google.com 223.5.5.5`，确认国内 DNS 能正常解析
+4. **清除应用数据** — 进入手机「设置 → 应用 → Google Play 商店」清除缓存和数据，然后重试
+5. **重启 Mihomo** — 有时候需要重启客户端让配置生效
+
+### 国内网站无法访问
+
+1. 检查 `nameserver` 配置中的 DNS 服务器是否可达（`223.5.5.5`、`119.29.29.29`）
+2. 确认路由规则中 `GEOSITE,cn` 和 `GEOIP,CN` 在 `MATCH` 规则之前
+3. 尝试关闭 `fake-ip` 模式测试是否为 Fake IP 导致的问题
+
+### DNS 解析失败
+
+1. 检查 `listen: 0.0.0.0:1053` 端口是否被占用
+2. 确认系统 DNS 设置指向了 Mihomo 的 DNS 端口（`127.0.0.1:1053`）
+3. 尝试更换 `nameserver` 中的 DNS 服务器地址
+
+### 代理连接缓慢
+
+1. 在 Mihomo 面板中执行延迟测试，选择延迟最低的节点
+2. 如果使用 `override.yaml` 的故障转移模式，检查 `max-failed-times` 设置
+3. 确认 `tcp-concurrent: true` 已开启
+
+---
+
+## 常见问题（FAQ）
+
+### 两个文件应该选哪个？
+
+| 场景 | 推荐文件 |
+|------|----------|
+| 快速上手、轻量使用 | `template.yaml` |
+| Android 手机用户 | `override.yaml`（Google Play 优化） |
+| 需要 Steam 下载直连 | `override.yaml` |
+| 需要故障转移（节点挂了自动切换） | `override.yaml` |
+| 不确定选哪个 | `override.yaml`（功能更完善） |
+
+### 如何更新配置？
+
+1. 在 SubStore 中重新拉取 Raw 链接即可（配置模板模式）
+2. YAML 覆写模式下，重新导入最新的 `override.yaml` 文件
+3. 更新后建议重启 Mihomo 客户端
+
+### 这些配置支持哪些客户端？
+
+本配置基于 **Mihomo（原 Clash Meta）** 内核，适用于所有使用 Mihomo 内核的客户端：
+
+- **Android**：SubStore（推荐）
+- **iOS**：Sub-Store（通过 SubStore 使用）
+- **路由器**：OpenClash（OpenWrt）
+
+> ⚠️ 不适用于 Clash for Windows 等已停止维护的客户端。
+
+### 配置中的 emoji 代理组名称会导致问题吗？
+
+大部分现代 Mihomo 客户端支持 emoji。如果你的客户端出现解析错误，将 `override.yaml` 中所有 `🚀 代理`、`🔄 故障转移`、`✋ 手动选择` 替换为纯 ASCII 名称（如 `proxy`、`fallback`、`manual`）。
+
+### 节点从哪里来？
+
+两个 YAML 文件都使用了 `include-all: true`，**节点由 SubStore 自动从你的订阅中注入**，不需要在配置文件中手动填写。
+
+---
+
+## 兼容性说明
+
+| 项目 | 要求 |
+|------|------|
+| Mihomo 内核 | ≥ 1.18.0（支持 GEOSITE/GEOIP rule-providers） |
+| SubStore | 最新版本 |
+| OpenClash | ≥ 0.46.0（支持 YAML 覆写） |
+
+### 已知限制
+
+- `nameserver-policy` 中的 emoji 标签在极少数旧版客户端中可能不被识别
+- `fake-ip` 模式下部分应用（如某些银行 App）可能需要将其域名加入 `fake-ip-filter`
+- GEOSITE/GEOIP 数据库需要定期更新才能保证规则准确
