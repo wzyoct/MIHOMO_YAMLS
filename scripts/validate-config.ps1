@@ -14,6 +14,20 @@ $configFiles = @('template.yaml', 'override.yaml')
 $builtInTargets = @('DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'GLOBAL')
 $failures = [System.Collections.Generic.List[string]]::new()
 
+function ConvertFrom-YamlScalar {
+    param([string]$Value)
+
+    $result = $Value.Trim()
+    if ($result.Length -ge 2 -and (
+        ($result.StartsWith('"') -and $result.EndsWith('"')) -or
+        ($result.StartsWith("'") -and $result.EndsWith("'"))
+    )) {
+        return $result.Substring(1, $result.Length - 2)
+    }
+
+    return $result
+}
+
 foreach ($configFile in $configFiles) {
     $path = Join-Path $RepositoryRoot $configFile
     if (-not (Test-Path -LiteralPath $path)) {
@@ -22,8 +36,15 @@ foreach ($configFile in $configFiles) {
     }
 
     $content = Get-Content -LiteralPath $path -Raw -Encoding utf8
-    $groupNames = [regex]::Matches($content, '(?m)^\s*-\s+name:\s*"(?<name>[^"]+)"\s*$') |
-        ForEach-Object { $_.Groups['name'].Value }
+    $proxyGroupSection = [regex]::Match($content, '(?ms)^proxy-groups:\s*\r?\n(?<body>.*?)(?=^rules:|\z)')
+    if (-not $proxyGroupSection.Success) {
+        $failures.Add("${configFile}: proxy-groups section is missing")
+        continue
+    }
+
+    $groupBody = $proxyGroupSection.Groups['body'].Value
+    $groupMatches = [regex]::Matches($groupBody, '(?m)^\s{2}-\s+name:\s*(?<name>.+?)\s*$')
+    $groupNames = @($groupMatches | ForEach-Object { ConvertFrom-YamlScalar $_.Groups['name'].Value })
 
     if ($groupNames.Count -eq 0) {
         $failures.Add("${configFile}: no proxy groups found")
@@ -36,6 +57,25 @@ foreach ($configFile in $configFiles) {
     }
 
     $targets = [System.Collections.Generic.List[string]]::new()
+    $proxyGroupReferences = [System.Collections.Generic.List[string]]::new()
+    for ($index = 0; $index -lt $groupMatches.Count; $index++) {
+        $start = $groupMatches[$index].Index + $groupMatches[$index].Length
+        $end = if ($index + 1 -lt $groupMatches.Count) { $groupMatches[$index + 1].Index } else { $groupBody.Length }
+        $definition = $groupBody.Substring($start, $end - $start)
+        $proxiesBlock = [regex]::Match($definition, '(?ms)^\s{4}proxies:\s*\r?\n(?<items>(?:^\s{6}-\s+.+\r?\n?)*)')
+
+        if ($proxiesBlock.Success) {
+            [regex]::Matches($proxiesBlock.Groups['items'].Value, '(?m)^\s{6}-\s+(?<value>.+?)\s*$') |
+                ForEach-Object { $proxyGroupReferences.Add((ConvertFrom-YamlScalar $_.Groups['value'].Value)) }
+        }
+    }
+
+    foreach ($reference in ($proxyGroupReferences | Sort-Object -Unique)) {
+        if ($reference -notin $builtInTargets -and $reference -notin $groupNames) {
+            $failures.Add("${configFile}: static proxy reference '$reference' has no matching proxy group")
+        }
+    }
+
     foreach ($line in ($content -split "`r?`n")) {
         if ($line -notmatch '^\s*-\s+(?<rule>[^#].*)$') {
             continue
@@ -62,7 +102,7 @@ foreach ($configFile in $configFiles) {
         }
     }
 
-    Write-Host "${configFile}: $($groupNames.Count) proxy groups, $($targets.Count) checked references"
+    Write-Host "${configFile}: $($groupNames.Count) proxy groups, $($proxyGroupReferences.Count + $targets.Count) checked references"
 }
 
 if ($failures.Count -gt 0) {

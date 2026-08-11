@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-11
+
+### 修复
+
+- DNS 默认改为仅监听本机回环地址，避免在局域网中无意暴露 DNS 服务。
+- 自动校验覆盖代理组 `proxies` 中的静态组引用。
+
+### 变更
+
+- GitHub Actions 固定 Ubuntu 版本与 `actions/checkout` 完整提交 SHA。
+- 修正客户端适用范围、DNS 监听与 Mihomo 兼容性说明。
+
 ## [1.0.0] - 2026-08-11
 
 ### 新增
@@ -22,5 +34,6 @@
 - Google Play 下载域名使用真实 DNS，并将中国大陆 CDN 下载流量设为直连。
 - 为 Tailscale 和局域网地址补充直连规则。
 
-[Unreleased]: https://github.com/wzyoct/MIHOMO_YAMLS/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/wzyoct/MIHOMO_YAMLS/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/wzyoct/MIHOMO_YAMLS/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/wzyoct/MIHOMO_YAMLS/releases/tag/v1.0.0
