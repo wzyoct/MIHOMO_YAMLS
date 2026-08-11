@@ -17,14 +17,14 @@ Mihomo（原 Clash Meta）代理客户端的 [SubStore](https://github.com/sub-s
 
 ### 方式一：配置模板（`template.yaml`）
 
-1. 将本仓库的 `template.yaml` 放到 GitHub 公开仓库
-2. 在 SubStore「配置模板」中填入该文件的 Raw 链接
-3. SubStore 会将你订阅中的节点自动注入到 `proxies` 列表，其余配置保持不变
+1. 在 SubStore「配置模板」中填入 [`template.yaml` Raw 链接](https://raw.githubusercontent.com/wzyoct/MIHOMO_YAMLS/main/template.yaml)
+2. 保存后由 SubStore 自动注入订阅节点
+3. 重新生成订阅并导入 Mihomo 客户端
 
 ### 方式二：YAML 覆写（`override.yaml`）
 
-1. 将本仓库的 `override.yaml` 放到 GitHub 公开仓库
-2. 在 SubStore 中使用支持 **YAML 覆写 / 配置覆写** 的入口导入此文件
+1. 在 SubStore 中使用支持 **YAML 覆写 / 配置覆写** 的入口导入 [`override.yaml` Raw 链接](https://raw.githubusercontent.com/wzyoct/MIHOMO_YAMLS/main/override.yaml)
+2. 重新生成订阅并导入 Mihomo 客户端
 3. **注意**：这是 YAML 覆写文件，**不能填到「脚本操作」里执行**
 
 > 节点由 SubStore 自动从你的订阅注入，两个文件都不需要手动填写节点信息。
@@ -124,6 +124,12 @@ MIHOMO_YAMLS/
 ├── template.yaml     # SubStore 配置模板（精简版）
 └── override.yaml     # YAML 覆写文件（完整版）
 ```
+
+## 维护与验证
+
+- 每次修改 YAML 后可在仓库根目录运行 `pwsh ./scripts/validate-config.ps1`，检查代理组名称与规则/DNS 引用是否一致。
+- GitHub Actions 会在 Pull Request 和 `main` 分支的配置改动上解析 YAML 格式并执行同样的引用检查；发布前仍应在实际的 SubStore 与 Mihomo 客户端中导入测试。
+- 变更详情记录在 [CHANGELOG.md](CHANGELOG.md)。提交问题时，请附上客户端、Mihomo 内核版本和已脱敏的错误日志。
 
 ## 注意事项
 
