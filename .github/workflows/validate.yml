@@ -1,0 +1,33 @@
+name: Validate configurations
+
+on:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - 'scripts/**'
+      - '.github/workflows/validate.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.yaml'
+      - 'scripts/**'
+      - '.github/workflows/validate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse YAML syntax
+        shell: bash
+        run: |
+          ruby -e "require 'yaml'; %w[template.yaml override.yaml].each { |file| YAML.safe_load_file(file); puts \"#{file}: valid YAML\" }"
+
+      - name: Check proxy group references
+        shell: pwsh
+        run: ./scripts/validate-config.ps1
