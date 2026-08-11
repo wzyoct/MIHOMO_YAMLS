@@ -37,7 +37,7 @@ Mihomo（原 Clash Meta）代理客户端的 [SubStore](https://github.com/sub-s
 
 ```yaml
 mixed-port: 7890          # HTTP/SOCKS 混合端口
-allow-lan: false          # 禁止局域网连接
+allow-lan: false          # 不允许局域网访问代理端口
 mode: rule                # 规则模式
 log-level: warning        # 日志级别
 ipv6: false               # 关闭 IPv6
@@ -54,6 +54,7 @@ tcp-concurrent: true      # TCP 并发连接
 - **Fake IP 过滤**：排除局域网域名、NTP 时间同步、微软连通性检测、**Google Play 下载域名**（`*.gvt1.com`、`*.dl.google.com`、`*.googleapis.cn` 等）
 - **nameserver**：国内 DNS（Ali DNS、DNSPod），确保国内域名解析正确
 - **nameserver-policy**（仅 `override.yaml`）：Steam 相关域名和 `geosite:cn` 走国内 DNS；**Google 域名** 和 `geosite:geolocation-!cn` 走 Google/Cloudflare DNS 代理
+- **监听范围**：默认仅监听 `127.0.0.1:1053`，避免向局域网暴露 DNS 服务。路由器或需要为其他设备提供 DNS 的用户可改为 `0.0.0.0:1053`，并应同时配置防火墙访问规则。
 
 ### 域名嗅探（仅 `override.yaml`）
 
@@ -136,6 +137,7 @@ MIHOMO_YAMLS/
 - ⚠️ 两个 YAML 文件都是 **配置数据**，不是可执行脚本，不要填入 SubStore 的「脚本操作」
 - ⚠️ `proxy-groups` 中使用了 `include-all: true`，SubStore 会自动将你订阅中的所有节点注入
 - ⚠️ 如遇国内网站访问异常，检查 DNS 配置中的 `nameserver` 是否可达
+- ⚠️ DNS 默认监听 `127.0.0.1:1053`，仅本机可访问；路由器或局域网 DNS 场景需改为 `0.0.0.0:1053` 并限制防火墙访问范围
 - ⚠️ `external-controller` 监听 `127.0.0.1` 仅本地可访问，如需局域网访问请修改
 - ⚠️ `override.yaml` 的 `nameserver-policy` 中使用了 emoji 代理组名称（`#🚀 代理`），如果客户端不支持 emoji 解析，请将代理组名称和所有引用改为纯 ASCII 名称
 
@@ -161,7 +163,7 @@ MIHOMO_YAMLS/
 
 ### DNS 解析失败
 
-1. 检查 `listen: 0.0.0.0:1053` 端口是否被占用
+1. 检查 `listen: 127.0.0.1:1053` 端口是否被占用
 2. 确认系统 DNS 设置指向了 Mihomo 的 DNS 端口（`127.0.0.1:1053`）
 3. 尝试更换 `nameserver` 中的 DNS 服务器地址
 
@@ -195,9 +197,8 @@ MIHOMO_YAMLS/
 
 本配置基于 **Mihomo（原 Clash Meta）** 内核，适用于所有使用 Mihomo 内核的客户端：
 
-- **Android**：SubStore（推荐）
-- **iOS**：Sub-Store（通过 SubStore 使用）
-- **路由器**：OpenClash（OpenWrt）
+- **移动端 / 桌面端**：使用 Mihomo 内核的客户端；SubStore 负责生成和管理订阅
+- **路由器**：OpenClash（OpenWrt）等使用 Mihomo 内核的方案
 
 > ⚠️ 不适用于 Clash for Windows 等已停止维护的客户端。
 
@@ -215,7 +216,7 @@ MIHOMO_YAMLS/
 
 | 项目 | 要求 |
 |------|------|
-| Mihomo 内核 | ≥ 1.18.0（支持 GEOSITE/GEOIP rule-providers） |
+| Mihomo 内核 | ≥ 1.18.0（使用内置 GEOSITE/GEOIP 规则） |
 | SubStore | 最新版本 |
 | OpenClash | ≥ 0.46.0（支持 YAML 覆写） |
 
