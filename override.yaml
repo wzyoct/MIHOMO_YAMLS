@@ -136,6 +136,9 @@ proxy-groups:
 # ── 路由规则 ──────────────────────────────────────────────────────
 
 rules:
+  # 指定域名直连
+  - DOMAIN-SUFFIX,3q.hair,DIRECT
+  - DOMAIN-SUFFIX,odn.cc,DIRECT
   # Steam 下载直连
   - DOMAIN-SUFFIX,steamserver.net,DIRECT
   - DOMAIN-SUFFIX,steamcontent.com,DIRECT

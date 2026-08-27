@@ -73,6 +73,9 @@ proxy-groups:
 # ────────────────────────────────────────────────────────
 
 rules:
+  # 指定域名直连
+  - DOMAIN-SUFFIX,3q.hair,DIRECT
+  - DOMAIN-SUFFIX,odn.cc,DIRECT
   - GEOIP,private,DIRECT,no-resolve
   - GEOSITE,CN,DIRECT
   - GEOIP,CN,DIRECT,no-resolve

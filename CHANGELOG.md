@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### 变更
+
+- 将 `3q.hair` 和 `odn.cc`（含所有子域名）加入 `template.yaml` 与 `override.yaml` 的直连规则。
+
 ## [1.0.1] - 2026-08-11
 
 ### 修复
