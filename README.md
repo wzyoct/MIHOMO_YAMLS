@@ -72,11 +72,12 @@ sniffer:
 
 | 代理组 | 类型 | 说明 |
 |--------|------|------|
-| 🚀 代理 | select | 顶层入口，仅使用「手动选择」 |
+| 🚀 代理 | select | 顶层入口，可选择「自动/故障转移」或「手动选择」 |
+| ⚡ 自动最快 / 🔄 故障转移 | url-test / fallback | 自动测速选最快 / 故障转移 |
 | ✋ 手动选择 | select | 手动指定节点 |
 
-- `template.yaml` 使用 `url-test`（自动测速选择最快节点，tolerance=50）
-- `override.yaml` 仅保留手动选择，节点由用户在客户端中指定
+- `template.yaml` 使用 `url-test`（自动最快，tolerance=50）
+- `override.yaml` 使用 `fallback`（故障转移，lazy=true，max-failed-times=3）
 
 ### 路由规则
 
@@ -102,7 +103,7 @@ sniffer:
 | DNS - proxy-server-nameserver | ❌ | ✅ |
 | DNS - nameserver-policy | ❌ | ✅（Steam + Google + geosite 分流） |
 | 域名嗅探（sniffer） | ❌ | ✅（TLS + HTTP） |
-| 代理组 - 节点选择 | url-test（⚡ 自动最快） | select（✋ 手动选择） |
+| 代理组 - 自动模式 | url-test（⚡ 自动最快） | fallback（🔄 故障转移） |
 | Google 服务路由规则 | ❌ | ✅（CDN 下载直连 + GEOSITE:google 兜底代理） |
 | Steam 路由规则 | ❌ | ✅（下载直连 + GEOSITE） |
 | CIDR 局域网规则 | GEOIP 一条 | IP-CIDR 五段 + GEOIP |
@@ -111,7 +112,7 @@ sniffer:
 ### 建议
 
 - 追求简洁、快速 → 用 `template.yaml`
-- 需要更完善的 DNS 分流、Google Play 商店优化、Steam 优化 → 用 `override.yaml`
+- 需要更完善的 DNS 分流、Google Play 商店优化、Steam 优化、故障转移 → 用 `override.yaml`
 - **Android 手机用户强烈建议使用 `override.yaml`**，已针对 Google Play 下载「准备中」问题进行专项优化
 
 ---
@@ -138,7 +139,7 @@ MIHOMO_YAMLS/
 - ⚠️ 如遇国内网站访问异常，检查 DNS 配置中的 `nameserver` 是否可达
 - ⚠️ DNS 默认监听 `127.0.0.1:1053`，仅本机可访问；路由器或局域网 DNS 场景需改为 `0.0.0.0:1053` 并限制防火墙访问范围
 - ⚠️ `external-controller` 监听 `127.0.0.1` 仅本地可访问，如需局域网访问请修改
-- ⚠️ `override.yaml` 的 `nameserver-policy` 中使用了 emoji 代理组名称（`#🚀 代理`），如果客户端不支持 emoji 解析，请将代理组名称和所有引用改为纯 ASCII 名称（如 `proxy`、`manual`）
+- ⚠️ `override.yaml` 的 `nameserver-policy` 中使用了 emoji 代理组名称（`#🚀 代理`），如果客户端不支持 emoji 解析，请将代理组名称和所有引用改为纯 ASCII 名称
 
 ---
 
@@ -169,7 +170,8 @@ MIHOMO_YAMLS/
 ### 代理连接缓慢
 
 1. 在 Mihomo 面板中执行延迟测试，选择延迟最低的节点
-2. 确认 `tcp-concurrent: true` 已开启
+2. 如果使用 `override.yaml` 的故障转移模式，检查 `max-failed-times` 设置
+3. 确认 `tcp-concurrent: true` 已开启
 
 ---
 
@@ -182,7 +184,7 @@ MIHOMO_YAMLS/
 | 快速上手、轻量使用 | `template.yaml` |
 | Android 手机用户 | `override.yaml`（Google Play 优化） |
 | 需要 Steam 下载直连 | `override.yaml` |
-| 需要手动指定节点 | `override.yaml` |
+| 需要故障转移（节点挂了自动切换） | `override.yaml` |
 | 不确定选哪个 | `override.yaml`（功能更完善） |
 
 ### 如何更新配置？
@@ -202,7 +204,7 @@ MIHOMO_YAMLS/
 
 ### 配置中的 emoji 代理组名称会导致问题吗？
 
-大部分现代 Mihomo 客户端支持 emoji。如果你的客户端出现解析错误，将 `override.yaml` 中所有 `🚀 代理`、`✋ 手动选择` 替换为纯 ASCII 名称（如 `proxy`、`manual`）。
+大部分现代 Mihomo 客户端支持 emoji。如果你的客户端出现解析错误，将 `override.yaml` 中所有 `🚀 代理`、`🔄 故障转移`、`✋ 手动选择` 替换为纯 ASCII 名称（如 `proxy`、`fallback`、`manual`）。
 
 ### 节点从哪里来？
 

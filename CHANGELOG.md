@@ -7,7 +7,7 @@
 ### 变更
 
 - 将 `3q.hair` 和 `odn.cc`（含所有子域名）加入 `template.yaml` 与 `override.yaml` 的直连规则。
-- 删除 `override.yaml` 的故障转移代理组，仅保留手动选择节点。
+- 恢复 `override.yaml` 的故障转移代理组，保留故障转移与手动选择两种模式。
 
 ## [1.0.1] - 2026-08-11
 
