@@ -46,6 +46,14 @@ Mihomo（原 Clash Meta）代理客户端的 [SubStore](https://github.com/sub-s
 | `SUBSTORE_PATH` | SubStore 后端随机路径，只使用字母、数字和下划线 |
 | `SSH_PORT` | VPS 实际 SSH 端口，不一定是 22 |
 
+公开存档只使用上述占位符。不要把真实 VPS 地址、SubStore 后端路径、机场订阅链接、Token、密码、证书或私钥写入仓库；部署凭据应保存在密码管理器中。Git 提交建议使用 GitHub 提供的 `noreply` 邮箱：
+
+```bash
+git config user.email "你的 GitHub noreply 邮箱"
+```
+
+仓库的 `.gitignore` 已覆盖常见的环境变量、证书、密钥和本地备份文件，但忽略规则不能替代提交前检查。
+
 ### 部署后的结构
 
 ```text

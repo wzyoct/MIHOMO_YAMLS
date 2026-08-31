@@ -9,6 +9,8 @@
 - 将 `3q.hair` 和 `odn.cc`（含所有子域名）加入 `template.yaml` 与 `override.yaml` 的直连规则。
 - 恢复 `override.yaml` 的故障转移代理组，保留故障转移与手动选择两种模式。
 - 在 README 增加 Debian 12 VPS 部署 Docker、Caddy HTTPS、SubStore 与 Mihomo 对接、更新备份及故障排除的完整归档。
+- 清理公开 Git 历史中的个人提交邮箱并统一为 GitHub `noreply` 邮箱，部署文档继续使用占位符。
+- 增加对环境变量、证书、密钥和本地备份文件的忽略规则，降低未来误提交凭据的风险。
 
 ## [1.0.1] - 2026-08-11
 

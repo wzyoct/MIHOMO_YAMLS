@@ -1,1 +1,13 @@
 .downloads/
+
+# Local credentials, certificates and deployment backups
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.secret
+*.tar.gz
+*.bundle
