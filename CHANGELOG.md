@@ -8,6 +8,7 @@
 
 - 将 `3q.hair` 和 `odn.cc`（含所有子域名）加入 `template.yaml` 与 `override.yaml` 的直连规则。
 - 恢复 `override.yaml` 的故障转移代理组，保留故障转移与手动选择两种模式。
+- 在 README 增加 Debian 12 VPS 部署 Docker、Caddy HTTPS、SubStore 与 Mihomo 对接、更新备份及故障排除的完整归档。
 
 ## [1.0.1] - 2026-08-11
 

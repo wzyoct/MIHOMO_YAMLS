@@ -31,6 +31,366 @@ Mihomo（原 Clash Meta）代理客户端的 [SubStore](https://github.com/sub-s
 
 ---
 
+## VPS 部署与 Mihomo 对接
+
+本节记录一套已经实际验证过的部署流程：Debian 12 amd64、Docker Engine、`xream/sub-store` 和 Caddy HTTPS。它适合将 SubStore 部署在自己的 VPS 上，再用本仓库的 YAML 生成 Mihomo 配置。
+
+本仓库不需要复制到 VPS。SubStore 直接读取 GitHub Raw 链接即可。文档中的以下占位符需要替换为自己的值：
+
+相关官方文档：[Docker Engine for Debian](https://docs.docker.com/engine/install/debian/)、[SubStore Docker](https://hub.docker.com/r/xream/sub-store) 和 [Caddy 安装](https://caddyserver.com/docs/install)。
+
+| 占位符 | 含义 |
+|--------|------|
+| `sub-store.example.com` | SubStore 使用的域名 |
+| `VPS_IP` | VPS 公网 IPv4 地址 |
+| `SUBSTORE_PATH` | SubStore 后端随机路径，只使用字母、数字和下划线 |
+| `SSH_PORT` | VPS 实际 SSH 端口，不一定是 22 |
+
+### 部署后的结构
+
+```text
+Mihomo 客户端
+    │ 远程导入最终配置链接
+    ▼
+https://sub-store.example.com
+    │ Caddy HTTPS 反向代理
+    ▼
+127.0.0.1:3001  SubStore Docker 容器
+    │ 读取机场订阅与本仓库 YAML
+    ▼
+最终 Mihomo 配置
+```
+
+### 前置检查
+
+1. 在 DNS 服务商处添加 A 记录：`sub-store.example.com` → `VPS_IP`。
+2. 如果没有配置 IPv6，不要添加指向错误地址的 AAAA 记录。
+3. 在 VPS 服务商的防火墙/安全组中放行 TCP `80` 和 `443`。
+4. 保留当前 SSH 端口的放行规则，并确认实际 SSH 端口：
+
+```bash
+ss -lntp | awk '$4 ~ /:[0-9]+$/ && $7 ~ /sshd/ {print}'
+```
+
+检查 DNS 和 80/443 是否被已有服务占用：
+
+```bash
+getent ahostsv4 sub-store.example.com | awk '{print $1}' | sort -u
+ss -ltnp | awk '$4 ~ /:(80|443)$/ {print}'
+```
+
+DNS 结果应包含 VPS 公网 IP。80 或 443 已被 Nginx、宝塔、1Panel 等服务占用时，应使用已有反向代理，不要再启动第二个服务抢占端口。
+
+### 1. 在 Debian 12 安装 Docker
+
+以下命令适用于以 `root` 登录的 Debian 12。非 root 用户请在命令前加 `sudo`。Docker 官方仓库方式会同时安装 Docker Compose 插件：
+
+```bash
+apt update
+apt install -y ca-certificates curl openssl
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg \
+  -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+
+tee /etc/apt/sources.list.d/docker.sources > /dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+```
+
+验证 Docker 服务和 Compose：
+
+```bash
+systemctl --no-pager --full status docker
+docker --version
+docker compose version
+docker run --rm hello-world
+```
+
+最后一条命令应输出 `Hello from Docker!`。如果系统已有 `docker.io`、`containerd` 或 `runc` 等发行版软件包，应先确认是否与 Docker 官方软件包冲突，再按 Docker 官方文档处理，不要盲目删除生产环境中的容器数据。
+
+### 2. 启动 SubStore 容器
+
+使用绑定目录保存数据，容器删除或更新时不会丢失 SubStore 数据。后端路径建议每台服务器随机生成，并保存到密码管理器中：
+
+```bash
+mkdir -p /root/sub-store-data
+SUBSTORE_PATH="/ss_$(openssl rand -hex 12)"
+printf '请保存这个 SubStore 后端路径: %s\n' "$SUBSTORE_PATH"
+```
+
+`SUBSTORE_PATH` 只是当前 SSH 会话中的 shell 变量。重新登录 VPS 后，需要先将它设置为之前保存的实际路径，或者直接把命令中的 `${SUBSTORE_PATH}` 替换成实际路径。
+
+使用上一步输出的路径启动容器：
+
+```bash
+docker run -d \
+  --name sub-store \
+  --restart=unless-stopped \
+  -e "SUB_STORE_FRONTEND_BACKEND_PATH=$SUBSTORE_PATH" \
+  -p 127.0.0.1:3001:3001 \
+  -v /root/sub-store-data:/opt/app/data \
+  xream/sub-store:latest
+```
+
+`latest` 适合快速部署；需要可重复部署时，应将镜像替换为经过验证的固定版本标签或 digest，并在更新前保留数据备份。
+
+验证容器和后端接口：
+
+```bash
+docker ps --filter name=sub-store
+curl -fsS "http://127.0.0.1:3001${SUBSTORE_PATH}/api/utils/env"
+```
+
+健康检查返回 JSON 且包含以下字段时，说明后端正常：
+
+```json
+{
+  "status": "success",
+  "data": {
+    "backend": "Node",
+    "version": "..."
+  }
+}
+```
+
+`-p 127.0.0.1:3001:3001` 很重要：它只允许 VPS 本机访问，不要改成 `-p 3001:3001` 或 `-p 0.0.0.0:3001:3001`，避免把管理后端暴露到公网。
+
+### 3. 使用 Caddy 配置 HTTPS
+
+Caddy 适合单域名反向代理，配置域名后会自动申请和续期证书。先安装官方 Debian 软件包：
+
+```bash
+apt install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg
+
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  -o /etc/apt/sources.list.d/caddy-stable.list
+
+chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+chmod o+r /etc/apt/sources.list.d/caddy-stable.list
+
+apt update
+apt install -y caddy
+```
+
+备份默认配置并写入反向代理配置：
+
+```bash
+cp -a /etc/caddy/Caddyfile /etc/caddy/Caddyfile.backup
+printf '%s\n' 'sub-store.example.com {' '    reverse_proxy 127.0.0.1:3001' '}' > /etc/caddy/Caddyfile
+```
+
+验证并加载配置：
+
+```bash
+caddy fmt --overwrite /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl enable --now caddy
+systemctl reload caddy
+systemctl --no-pager --full status caddy
+```
+
+查看证书申请日志：
+
+```bash
+journalctl -u caddy -n 100 --no-pager
+```
+
+看到 `certificate obtained successfully` 表示证书已签发。证书申请失败时，优先检查 DNS 是否指向当前 VPS，以及服务商防火墙是否放行 TCP `80` 和 `443`。
+
+通过域名检查 SubStore 后端：
+
+```bash
+curl -fsS "https://sub-store.example.com${SUBSTORE_PATH}/api/utils/env"
+```
+
+### 4. 打开 SubStore 前端
+
+在浏览器打开以下地址，将域名和后端路径替换为自己的值：
+
+```text
+https://sub-store.example.com/?api=https://sub-store.example.com/SUBSTORE_PATH
+```
+
+例如，`SUBSTORE_PATH` 如果是 `/ss_abc123`，最终地址就是：
+
+```text
+https://sub-store.example.com/?api=https://sub-store.example.com/ss_abc123
+```
+
+下面这个地址是后端健康检查接口，返回 JSON 是正常的，不是前端页面：
+
+```text
+https://sub-store.example.com/SUBSTORE_PATH/api/utils/env
+```
+
+HTTPS 部署完成后，不再需要 SSH 隧道。SubStore 官方 Docker 文档中的前端访问方式也是通过 `?api=` 指定后端地址。
+
+---
+
+### 5. 在 SubStore 中接入机场订阅
+
+全部操作在 SubStore 网页中完成：
+
+1. 进入「订阅管理」，点击「添加」或 `+`。
+2. 填写订阅名称，例如 `机场主订阅`。
+3. 将机场订阅链接填入远程订阅 URL。
+4. 保存并更新订阅。
+5. 预览订阅，确认能看到节点。
+
+机场订阅 URL 通常包含账号凭据，不要提交到 GitHub，也不要发给他人。
+
+### 6. 将本仓库 YAML 接入 Mihomo 配置
+
+推荐使用功能更完整的 `override.yaml`：
+
+```text
+https://raw.githubusercontent.com/wzyoct/MIHOMO_YAMLS/main/override.yaml
+```
+
+在 SubStore 中：
+
+1. 进入「文件」，点击「新建」。
+2. 选择「Mihomo 配置」或「Clash.Meta 配置」。
+3. 填写配置名称，例如 `mickey-mihomo`。
+4. 来源类型选择「订阅」，来源选择刚才保存的机场订阅。
+5. 在该 Mihomo 配置页面的「覆写 / 配置覆写」字段填入上面的 Raw 链接。
+6. 保存并预览。
+
+这里使用的是 Mihomo 配置页面中的覆写字段，不是左侧独立的「脚本操作」页面。`override.yaml` 是 YAML 配置数据，不是 JavaScript 脚本。
+
+预览时应确认：
+
+- 能看到机场节点；
+- 存在 `🚀 代理`、`🔄 故障转移` 和 `✋ 手动选择`；
+- 没有 YAML 解析错误；
+- 规则中包含国内直连和最终代理兜底规则。
+
+如果只需要精简配置，也可以在「配置模板」中使用：
+
+```text
+https://raw.githubusercontent.com/wzyoct/MIHOMO_YAMLS/main/template.yaml
+```
+
+### 7. 生成最终订阅并导入客户端
+
+在已保存的 Mihomo 配置上点击「分享」「导出」或分享图标，选择 `Mihomo` / `Clash.Meta`，复制 SubStore 生成的远程订阅链接。
+
+最终链接通常类似：
+
+```text
+https://sub-store.example.com/SUBSTORE_PATH/api/file/...
+```
+
+不要把机场原始链接或 `override.yaml` Raw 链接直接当作最终客户端订阅。客户端应导入 SubStore 生成的链接，这样订阅更新和 YAML 更新可以统一管理。
+
+在 Mihomo Party、Clash Verge Rev、OpenClash 或其他 Mihomo 客户端中，进入「配置 / Profiles / 订阅管理」：
+
+1. 添加远程配置。
+2. 粘贴 SubStore 生成的链接。
+3. 保存并更新。
+4. 选择该配置作为当前配置。
+5. 在 `✋ 手动选择` 中选择节点，或使用 `🔄 故障转移`。
+
+### 8. 日常更新与备份
+
+机场订阅更新：在 SubStore 的「订阅管理」中更新，客户端再更新最终链接。
+
+本仓库 YAML 更新：SubStore 中重新拉取 Raw 链接，然后客户端更新最终链接。
+
+更新 SubStore 镜像时，必须使用与首次启动相同的后端路径和数据目录：
+
+```bash
+docker pull xream/sub-store:latest
+docker stop sub-store
+docker rm sub-store
+
+# 重新执行“启动 SubStore 容器”中的 docker run，
+# 保持 SUB_STORE_FRONTEND_BACKEND_PATH 和数据目录不变。
+```
+
+删除容器不会删除 `/root/sub-store-data` 绑定目录，但不要删除该目录。
+
+备份本地数据：
+
+```bash
+tar -C /root -czf "/root/sub-store-data-$(date +%F).tar.gz" sub-store-data
+chmod 600 /root/sub-store-data-*.tar.gz
+```
+
+备份文件可能包含订阅信息和配置凭据，只保存到受控位置，不要上传到公开仓库。
+
+### 9. 常用检查与故障排除
+
+查看容器：
+
+```bash
+docker ps --filter name=sub-store
+docker logs --tail 100 sub-store
+```
+
+查看 Caddy：
+
+```bash
+systemctl --no-pager --full status caddy
+journalctl -u caddy -n 100 --no-pager
+```
+
+检查监听端口：
+
+```bash
+ss -ltnp | awk '$4 ~ /:(80|443|3001)$/ {print}'
+```
+
+预期结果是：Caddy 监听 80/443，SubStore 只监听 `127.0.0.1:3001`。
+
+常见现象：
+
+| 现象 | 优先检查 |
+|------|----------|
+| 浏览器无法申请证书 | DNS、服务商防火墙、TCP 80/443 |
+| Caddy 返回 502 | `docker ps`、SubStore 日志、`curl http://127.0.0.1:3001...` |
+| 访问后看到后端 JSON | 访问的是 `/api/utils/env`，前端应使用根路径加 `?api=` |
+| 预览没有节点 | 机场订阅是否过期、订阅更新日志、输入格式 |
+| YAML 解析失败 | 是否把 YAML 放进了「脚本操作」，或客户端内核版本过旧 |
+| SSH、Reality、网页同时短暂中断 | 检查 VPS 重启记录、内核日志、网卡状态和服务商网络事件 |
+
+网络故障排查时不要直接执行 `iptables -F`、`nft flush ruleset` 或关闭防火墙。SSH 端口也不要默认假设为 22，应使用实际监听端口，例如：
+
+```powershell
+Test-NetConnection VPS_IP -Port SSH_PORT
+```
+
+如果 SSH、Reality 和其他公网服务同时不可达，而 VPS 没有重启、资源正常且内核没有网卡异常，应把故障时间和 VPS IP 提交给服务商排查宿主机或上游网络。
+
+### 10. 最终检查清单
+
+- [ ] DNS A 记录指向 VPS，错误 AAAA 记录已删除。
+- [ ] 服务商防火墙放行 TCP 80/443 和实际 SSH 端口。
+- [ ] Docker、Compose、SubStore 容器状态正常。
+- [ ] SubStore 数据目录已绑定到宿主机。
+- [ ] SubStore 后端只监听 `127.0.0.1:3001`。
+- [ ] Caddy 已成功签发 HTTPS 证书。
+- [ ] SubStore 前端通过 `https://域名/?api=https://域名/随机路径` 打开。
+- [ ] SubStore 中机场订阅预览有节点。
+- [ ] Mihomo 配置使用了本仓库的 YAML 覆写链接。
+- [ ] 客户端导入的是 SubStore 生成的最终链接。
+
+---
+
 ## 配置详解
 
 ### 基础设置
