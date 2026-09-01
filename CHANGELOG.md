@@ -6,6 +6,7 @@
 
 ### 变更
 
+- 完善 `override.yaml` 的 Steam 分流：下载域名、SteamPipe CDN、连接管理域名和直接访问的 Valve `AS32590` IP 直连，商店及其余 Steam 域名继续走代理，并补充 ASN 数据库配置与校验支持。
 - 将 `3q.hair` 和 `odn.cc`（含所有子域名）加入 `template.yaml` 与 `override.yaml` 的直连规则。
 - 恢复 `override.yaml` 的故障转移代理组，保留故障转移与手动选择两种模式。
 - 在 README 增加 Debian 12 VPS 部署 Docker、Caddy HTTPS、SubStore 与 Mihomo 对接、更新备份及故障排除的完整归档。

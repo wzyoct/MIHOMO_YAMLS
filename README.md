@@ -421,7 +421,7 @@ tcp-concurrent: true      # TCP 并发连接
 - **Fake IP 范围**：`198.18.0.1/16`
 - **Fake IP 过滤**：排除局域网域名、NTP 时间同步、微软连通性检测、**Google Play 下载域名**（`*.gvt1.com`、`*.dl.google.com`、`*.googleapis.cn` 等）
 - **nameserver**：国内 DNS（Ali DNS、DNSPod），确保国内域名解析正确
-- **nameserver-policy**（仅 `override.yaml`）：Steam 相关域名和 `geosite:cn` 走国内 DNS；**Google 域名** 和 `geosite:geolocation-!cn` 走 Google/Cloudflare DNS 代理
+- **nameserver-policy**（仅 `override.yaml`）：Steam 下载与内容服务器域名和 `geosite:cn` 走国内 DNS；**Google 域名** 和 `geosite:geolocation-!cn` 走 Google/Cloudflare DNS 代理
 - **监听范围**：默认仅监听 `127.0.0.1:1053`，避免向局域网暴露 DNS 服务。路由器或需要为其他设备提供 DNS 的用户可改为 `0.0.0.0:1053`，并应同时配置防火墙访问规则。
 
 ### 域名嗅探（仅 `override.yaml`）
@@ -453,7 +453,7 @@ sniffer:
 
 1. **局域网 / 私有地址** → `DIRECT`（直连）
 2. **Google 服务**（仅 `override.yaml`）：CDN 下载域名（`xn--ngstr-lra8j.com`、`clientservices.googleapis.com`、`update.googleapis.com`）走 `DIRECT` 直连，其余浏览/API 走 `🚀 代理`
-3. **Steam 相关**（仅 `override.yaml`）：下载服务器直连，其余走代理
+3. **Steam 相关**（仅 `override.yaml`）：下载域名（含 `steamcontent.com` 和 SteamPipe 第三方 CDN）优先走 `DIRECT`，商店及其余 Steam 域名随后由 `GEOSITE,steam` 走 `🚀 代理`；直接访问的 Valve `AS32590` IP 最后走 `DIRECT`
 4. **国内网站 / IP** → `DIRECT`（通过 GEOSITE:CN / GEOIP:CN）
 5. **其余所有流量** → `🚀 代理`
 
@@ -470,12 +470,13 @@ sniffer:
 | DNS - default-nameserver | ❌ | ✅ |
 | DNS - proxy-server-nameserver | ❌ | ✅ |
 | DNS - nameserver-policy | ❌ | ✅（Steam + Google + geosite 分流） |
+| GEO - ASN 数据库 | ❌ | ✅（Valve `AS32590` 识别） |
 | 域名嗅探（sniffer） | ❌ | ✅（TLS + HTTP） |
 | 代理组 - 自动模式 | url-test（⚡ 自动最快） | fallback（🔄 故障转移） |
 | Google 服务路由规则 | ❌ | ✅（CDN 下载直连 + GEOSITE:google 兜底代理） |
-| Steam 路由规则 | ❌ | ✅（下载直连 + GEOSITE） |
+| Steam 路由规则 | ❌ | ✅（下载域名 / Valve AS 直连 + 商店代理） |
 | CIDR 局域网规则 | GEOIP 一条 | IP-CIDR 五段 + GEOIP |
-| 文件行数 | 79 行 | ~164 行 |
+| 文件行数 | 82 行 | 189 行 |
 
 ### 建议
 
@@ -593,3 +594,4 @@ MIHOMO_YAMLS/
 - `nameserver-policy` 中的 emoji 标签在极少数旧版客户端中可能不被识别
 - `fake-ip` 模式下部分应用（如某些银行 App）可能需要将其域名加入 `fake-ip-filter`
 - GEOSITE/GEOIP 数据库需要定期更新才能保证规则准确
+- Steam 的 `IP-ASN,32590` 规则依赖 `GeoLite2-ASN.mmdb`；首次加载时需确保客户端能下载配置中指定的 ASN 数据库

@@ -23,6 +23,10 @@ secret: ""
 unified-delay: true
 tcp-concurrent: true
 
+# IP-ASN 规则使用的数据库
+geox-url:
+  asn: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
+
 # ── DNS ───────────────────────────────────────────────────────────
 
 dns:
@@ -78,6 +82,9 @@ dns:
       - https://223.5.5.5/dns-query
       - https://doh.pub/dns-query
     "+.steamchina.com":
+      - https://223.5.5.5/dns-query
+      - https://doh.pub/dns-query
+    "+.cm.steampowered.com":
       - https://223.5.5.5/dns-query
       - https://doh.pub/dns-query
     "geosite:cn,private,steam@cn":
@@ -139,10 +146,23 @@ rules:
   # 指定域名直连
   - DOMAIN-SUFFIX,3q.hair,DIRECT
   - DOMAIN-SUFFIX,odn.cc,DIRECT
-  # Steam 下载直连
+  # Steam 下载与内容服务器直连
   - DOMAIN-SUFFIX,steamserver.net,DIRECT
   - DOMAIN-SUFFIX,steamcontent.com,DIRECT
   - DOMAIN-SUFFIX,steamchina.com,DIRECT
+  - DOMAIN-SUFFIX,cm.steampowered.com,DIRECT
+  - DOMAIN,steampipe.akamaized.net,DIRECT
+  - DOMAIN,steampipe-kr.akamaized.net,DIRECT
+  - DOMAIN,steampipe-partner.akamaized.net,DIRECT
+  - DOMAIN,steam.apac.qtlglb.com,DIRECT
+  - DOMAIN,steam.eca.qtlglb.com,DIRECT
+  - DOMAIN,steam.naeu.qtlglb.com,DIRECT
+  - DOMAIN,steam.ru.qtlglb.com,DIRECT
+  - DOMAIN,edge.steam-dns.top.comcast.net,DIRECT
+  - DOMAIN,steam.cdn.on.net,DIRECT
+  - DOMAIN,steam.cdn.orcon.net.nz,DIRECT
+  - DOMAIN,steam.cdn.slingshot.co.nz,DIRECT
+  - DOMAIN,steam.cdn.webra.ru,DIRECT
   # Google 服务 CDN 下载走直连（国内 CDN，走代理反而卡住 — OpenClash #3131/#4064 公认修复）
   - DOMAIN-SUFFIX,xn--ngstr-lra8j.com,DIRECT
   - DOMAIN,services.googleapis.cn,DIRECT
@@ -150,9 +170,11 @@ rules:
   - DOMAIN,update.googleapis.com,DIRECT
   # Google 其他服务走代理（GEOSITE 兜底，在 CN 规则之前）
   - GEOSITE,google,🚀 代理
-  # Steam GEOSITE 规则
+  # Steam 国内下载节点直连，商店和其余 Steam 域名走代理
   - GEOSITE,steam@cn,DIRECT
   - GEOSITE,steam,🚀 代理
+  # 直接访问 Valve 内容服务器 IP 时走直连；置于 Steam 域名规则之后，避免商店误命中
+  - IP-ASN,32590,DIRECT
   # 局域网直连
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve

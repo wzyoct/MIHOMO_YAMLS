@@ -85,7 +85,7 @@ foreach ($configFile in $configFiles) {
         if ($parts[0] -eq 'MATCH' -and $parts.Count -ge 2) {
             $targets.Add($parts[1].Trim())
         }
-        elseif ($parts.Count -ge 3 -and $parts[0] -match '^(DOMAIN|DOMAIN-SUFFIX|DOMAIN-KEYWORD|GEOSITE|GEOIP|IP-CIDR|IP-CIDR6|SRC-IP-CIDR|SRC-PORT|DST-PORT)$') {
+        elseif ($parts.Count -ge 3 -and $parts[0] -match '^(DOMAIN|DOMAIN-SUFFIX|DOMAIN-KEYWORD|GEOSITE|GEOIP|IP-ASN|IP-CIDR|IP-CIDR6|SRC-IP-CIDR|SRC-PORT|DST-PORT)$') {
             $targets.Add($parts[2].Trim())
         }
     }
